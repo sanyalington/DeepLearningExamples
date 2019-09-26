@@ -17,7 +17,8 @@ from src.data import get_train_loader, get_val_dataset, get_val_dataloader, get_
 try:
     from apex.parallel.LARC import LARC
     from apex import amp
-    from apex.parallel import DistributedDataParallel as DDP
+    #from apex.parallel import DistributedDataParallel as DDP
+    from torch.nn.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
 except ImportError:
     raise ImportError("Please install APEX from https://github.com/nvidia/apex")
@@ -62,7 +63,7 @@ def make_parser():
                         help='save model checkpoints')
     parser.add_argument('--mode', type=str, default='training',
                         choices=['training', 'evaluation', 'benchmark-training', 'benchmark-inference'])
-    parser.add_argument('--evaluation', nargs='*', type=int, default=[21, 31, 37, 42, 48, 53, 59, 64],
+    parser.add_argument('--evaluation', nargs='*', type=int, default=[1,21, 31, 37, 42, 48, 53, 59, 64],
                         help='epochs at which to evaluate')
     parser.add_argument('--multistep', nargs='*', type=int, default=[43, 54],
                         help='epochs at which to decay learning rate')
@@ -153,7 +154,8 @@ def train(train_loop_func, logger, args):
         ssd300, optimizer = amp.initialize(ssd300, optimizer, opt_level='O2')
 
     if args.distributed:
-        ssd300 = DDP(ssd300)
+        #ssd300 = DDP(ssd300)
+        ssd300 = DDP(ssd300,device_ids=[args.local_rank])
 
     if args.checkpoint is not None:
         if os.path.isfile(args.checkpoint):
